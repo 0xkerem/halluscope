@@ -1,4 +1,3 @@
-
 import torch
 from collections import deque
 from typing import List
@@ -34,3 +33,33 @@ class MemoryBank:
 
 # Global memory bank shared across calls
 _memory_bank = MemoryBank()
+
+
+def clip_features(h: torch.Tensor) -> torch.Tensor:
+    """
+    Apply feature clipping to embedding tensor.
+    Args:
+        h : (hidden_dim,) or (seq_len, hidden_dim)
+    Returns:
+        clipped tensor of same shape
+    """
+    h_min, h_max = _memory_bank.get_thresholds()
+    if h_min is None:
+        return h  # Not enough data yet, skip clipping
+    h_min = h_min.to(h.device)
+    h_max = h_max.to(h.device)
+    return torch.clamp(h, min=h_min, max=h_max)
+
+
+def update_memory_bank(hidden_states: torch.Tensor):
+    """
+    Update memory bank with token embeddings from penultimate layer.
+    hidden_states: (num_layers, seq_len, hidden_dim)
+    """
+    penultimate = hidden_states[-2]  # (seq_len, hidden_dim)
+    _memory_bank.update(penultimate)
+
+
+def reset_memory_bank():
+    global _memory_bank
+    _memory_bank = MemoryBank()
