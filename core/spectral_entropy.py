@@ -1,4 +1,3 @@
-
 """
 SpectralEntropy — Novel hallucination detection metric.
 
@@ -20,3 +19,65 @@ Motivation:
     EigenScore measures total semantic spread (volume), while
     SpectralEntropy measures the uniformity of that spread (shape).
 """
+
+import torch
+import numpy as np
+from typing import List
+from core.embeddings import build_embedding_matrix
+from core.eigenscore import compute_covariance, compute_eigenvalues
+from utils.config import CFG
+
+
+def spectral_entropy(
+    hidden_states_list: List[torch.Tensor],
+    apply_clip: bool = True,
+    layer_index: int = None,
+) -> dict:
+    """
+    Compute SpectralEntropy for K responses.
+
+    Returns:
+        score        : float, higher → more hallucination
+        eigenvalues  : raw eigenvalues
+        probs        : normalized eigenvalue distribution (for visualization)
+        max_entropy  : log(K), theoretical max entropy (for normalization)
+        normalized_score : score / max_entropy ∈ [0, 1]
+    """
+    from core.feature_clip import clip_features, update_memory_bank
+
+    eps = CFG.spectral.epsilon
+
+    processed = []
+    for hs in hidden_states_list:
+        update_memory_bank(hs)
+        if apply_clip:
+            clipped = hs.clone()
+            clipped[-2] = clip_features(hs[-2])
+            processed.append(clipped)
+        else:
+            processed.append(hs)
+
+    Z = build_embedding_matrix(processed, layer_index)
+    Sigma = compute_covariance(Z)
+    eigenvalues = compute_eigenvalues(Sigma, alpha=CFG.spectral.alpha)
+
+    # Normalize to probability distribution
+    eig_pos = torch.clamp(eigenvalues, min=0.0)
+    total = eig_pos.sum() + eps
+    probs = (eig_pos / total).cpu().numpy()
+
+    # Shannon entropy: H = -sum(p * log(p))
+    log_probs = np.log(probs + eps)
+    entropy = float(-np.sum(probs * log_probs))
+
+    K = len(hidden_states_list)
+    max_entropy = float(np.log(K))
+    normalized = entropy / max_entropy if max_entropy > 0 else 0.0
+
+    return {
+        "score": entropy,
+        "normalized_score": normalized,
+        "eigenvalues": eigenvalues.cpu().tolist(),
+        "probs": probs.tolist(),
+        "max_entropy": max_entropy,
+    }
