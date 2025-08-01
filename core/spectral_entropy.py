@@ -81,3 +81,16 @@ def spectral_entropy(
         "probs": probs.tolist(),
         "max_entropy": max_entropy,
     }
+
+
+def combined_score(eigen_result: dict, spectral_result: dict, w1: float = 0.5, w2: float = 0.5) -> float:
+    """
+    Weighted combination of EigenScore and SpectralEntropy.
+    Both are normalized to [0,1] before combining.
+    EigenScore is negated (more negative = less hallucination).
+    """
+    # Normalize EigenScore: clip to [-10, 0] range then scale
+    e_norm = float(np.clip(-eigen_result["score"] / 10.0, 0, 1))
+    s_norm = float(spectral_result["normalized_score"])
+    # Higher combined score → more likely hallucination
+    return w1 * (1 - e_norm) + w2 * s_norm
