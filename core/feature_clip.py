@@ -21,7 +21,7 @@ class MemoryBank:
         """Returns (h_min, h_max) per neuron using top/bottom p percentile."""
         if len(self._bank) < 10:
             return None, None
-        bank_tensor = torch.stack(list(self._bank))  # (N, hidden_dim)
+        bank_tensor = torch.stack(list(self._bank)).float()  # (N, hidden_dim)
         p = CFG.clip.clip_percentile
         h_min = torch.quantile(bank_tensor, p / 100, dim=0)
         h_max = torch.quantile(bank_tensor, 1 - p / 100, dim=0)
