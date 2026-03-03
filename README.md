@@ -4,6 +4,8 @@ LLM hallucination detection using internal hidden states.
 Implements **EigenScore** (INSIDE, ICLR 2024) and introduces a novel
 **SpectralEntropy** metric on top of it, evaluated on Phi-2.
 
+![HalluScope Demo](assets/screenshot.png)
+
 ## Setup
 
 ```bash
@@ -45,11 +47,4 @@ shape of the response distribution, yielding the **Combined** score.
 
 ## Citation
 
-```bibtex
-@inproceedings{chen2024inside,
-  title={INSIDE: LLMs' Internal States Retain the Power of Hallucination Detection},
-  author={Chen, Chao and Liu, Kai and Chen, Ze and Gu, Yi and Wu, Yue and Tao, Mingyuan and Fu, Zhihang and Ye, Jieping},
-  booktitle={ICLR},
-  year={2024}
-}
-```
+This project builds on INSIDE: *LLMs' Internal States Retain the Power of Hallucination Detection* by Chen et al. (ICLR 2024). The paper proposes using LLMs' internal hidden states for hallucination detection and introduces the EigenScore metric. Available on [arXiv](https://arxiv.org/abs/2402.03744).
